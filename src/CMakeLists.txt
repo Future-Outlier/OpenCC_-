@@ -10,7 +10,7 @@ if(NOT USE_SYSTEM_RAPIDJSON)
   include_directories(../deps/rapidjson-1.1.0)
 endif()
 if(NOT USE_SYSTEM_TCLAP)
-  include_directories(../deps/tclap-1.2.2)
+  include_directories(../deps/tclap-1.2.5)
 endif()
 
 # Library
@@ -85,7 +85,7 @@ set(UNITTESTS
 if (ENABLE_DARTS)
   set(OPENCC_ENABLE_DARTS 1)
   if(NOT USE_SYSTEM_DARTS)
-    include_directories(../deps/darts-clone)
+    include_directories(../deps/darts-clone-0.32)
   endif()
   set(
     LIBOPENCC_HEADERS

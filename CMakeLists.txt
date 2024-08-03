@@ -38,11 +38,11 @@ option(USE_SYSTEM_RAPIDJSON "Use system version of RapidJSON" OFF)
 option(USE_SYSTEM_TCLAP "Use system version of TCLAP" OFF)
 
 ######## Package information
-set (PACKAGE_URL https://github.com/BYVoid/Opencc)
-set (PACKAGE_BUGREPORT https://github.com/BYVoid/Opencc/issues)
+set (PACKAGE_URL https://github.com/BYVoid/OpenCC)
+set (PACKAGE_BUGREPORT https://github.com/BYVoid/OpenCC/issues)
 set (OPENCC_VERSION_MAJOR 1)
 set (OPENCC_VERSION_MINOR 1)
-set (OPENCC_VERSION_REVISION 7)
+set (OPENCC_VERSION_REVISION 9)
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set (version_suffix .Debug)
@@ -57,7 +57,7 @@ set(CPACK_SOURCE_PACKAGE_FILE_NAME
   "${PACKAGE_NAME}-${OPENCC_VERSION_MAJOR}.${OPENCC_VERSION_MINOR}.${OPENCC_VERSION_REVISION}"
 )
 set(CPACK_SOURCE_IGNORE_FILES
-  "/build/;/test/dict.ocd;/test/dict.txt;/test/dict.bin;/other/;/opencc.xcodeproj/;/.git/;.gitignore;~$;.pyc;${CPACK_SOURCE_IGNORE_FILES}"
+  "/build/;/test/dict.ocd;/test/dict.txt;/test/dict.bin;/other/;/opencc.xcodeproj/;/.git/;.gitignore;~$;.pyc;/bazel*;/node_modules;/.github;/.pytest_cache;/.vscode;${CPACK_SOURCE_IGNORE_FILES}"
 )
 include(CPack)
 
@@ -229,7 +229,7 @@ add_subdirectory(test)
 
 if (ENABLE_GTEST)
   if(NOT USE_SYSTEM_GTEST)
-    add_subdirectory(deps/gtest-1.12.1)
+    add_subdirectory(deps/googletest-1.15.0)
   endif()
   enable_testing()
 endif()
@@ -248,7 +248,7 @@ if (BUILD_PYTHON)
   if(USE_SYSTEM_PYBIND11)
     find_package(pybind11 CONFIG)
   else()
-    add_subdirectory(deps/pybind11-2.10.0)
+    add_subdirectory(deps/pybind11-2.13.1)
   endif()
   pybind11_add_module(opencc_clib src/py_opencc.cpp)
   target_link_libraries(opencc_clib PRIVATE libopencc)

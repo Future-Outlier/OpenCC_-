@@ -1,10 +1,35 @@
+load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_python//python:py_library.bzl", "py_library")
+
+package(default_visibility = ["//visibility:public"])
+
 cc_library(
     name = "opencc",
-    visibility = ["//visibility:public"],
     deps = [
         ":binary_dict",
         ":common",
+        ":config",
+        ":conversion",
+        ":conversion_chain",
+        ":converter",
         ":darts_dict",
+        ":dict",
+        ":dict_converter",
+        ":dict_entry",
+        ":dict_group",
+        ":exception",
+        ":lexicon",
+        ":marisa_dict",
+        ":max_match_segmentation",
+        ":phrase_extract",
+        ":segmentation",
+        ":segments",
+        ":serializable_dict",
+        ":serialized_values",
+        ":simple_converter",
+        ":utf8_string_slice",
+        ":utf8_util",
     ],
 )
 
@@ -30,12 +55,118 @@ cc_test(
 )
 
 cc_library(
+    name = "cmd_line_output",
+    hdrs = ["CmdLineOutput.hpp"],
+    visibility = ["//src/tools:__pkg__"],
+    deps = [
+        "@tclap",
+    ],
+)
+
+cc_library(
     name = "common",
     hdrs = [
         "Common.hpp",
         "Export.hpp",
         "Optional.hpp",
         "opencc_config.h",
+    ],
+    defines = ["Opencc_BUILT_AS_STATIC"],
+)
+
+cc_library(
+    name = "config",
+    srcs = ["Config.cpp"],
+    hdrs = ["Config.hpp"],
+    deps = [
+        ":common",
+        ":conversion_chain",
+        ":converter",
+        ":darts_dict",
+        ":dict_group",
+        ":marisa_dict",
+        ":max_match_segmentation",
+        ":text_dict",
+        "@rapidjson",
+    ],
+)
+
+cc_test(
+    name = "config_test",
+    srcs = ["ConfigTest.cpp"],
+    deps = [
+        ":common",
+        ":config",
+        ":config_test_base",
+        ":converter",
+        ":test_utils_utf8",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "config_test_base",
+    testonly = True,
+    hdrs = ["ConfigTestBase.hpp"],
+    data = ["//test/config_test"],
+    defines = ["BAZEL"],
+    deps = [
+        ":test_utils",
+        "@bazel_tools//tools/cpp/runfiles",
+    ],
+)
+
+cc_library(
+    name = "conversion",
+    srcs = ["Conversion.cpp"],
+    hdrs = ["Conversion.hpp"],
+    deps = [
+        ":common",
+        ":dict",
+        ":segmentation",
+    ],
+)
+
+cc_test(
+    name = "conversion_test",
+    srcs = ["ConversionTest.cpp"],
+    deps = [
+        ":conversion",
+        ":dict_group_test_base",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "conversion_chain",
+    srcs = ["ConversionChain.cpp"],
+    hdrs = ["ConversionChain.hpp"],
+    deps = [
+        ":common",
+        ":conversion",
+        ":segments",
+    ],
+)
+
+cc_test(
+    name = "conversion_chain_test",
+    srcs = ["ConversionChainTest.cpp"],
+    deps = [
+        ":conversion_chain",
+        ":dict_group_test_base",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "converter",
+    srcs = ["Converter.cpp"],
+    hdrs = ["Converter.hpp"],
+    deps = [
+        ":common",
+        ":conversion_chain",
+        ":segmentation",
+        ":segments",
     ],
 )
 
@@ -73,6 +204,18 @@ cc_library(
 )
 
 cc_library(
+    name = "dict_converter",
+    srcs = ["DictConverter.cpp"],
+    hdrs = ["DictConverter.hpp"],
+    deps = [
+        ":common",
+        ":darts_dict",
+        ":marisa_dict",
+        ":text_dict",
+    ],
+)
+
+cc_library(
     name = "dict_entry",
     srcs = ["DictEntry.cpp"],
     hdrs = ["DictEntry.hpp"],
@@ -80,6 +223,37 @@ cc_library(
         ":common",
         ":segments",
         ":utf8_util",
+    ],
+)
+
+cc_library(
+    name = "dict_group",
+    srcs = ["DictGroup.cpp"],
+    hdrs = ["DictGroup.hpp"],
+    deps = [
+        ":common",
+        ":dict",
+        ":lexicon",
+        ":text_dict",
+    ],
+)
+
+cc_test(
+    name = "dict_group_test",
+    srcs = ["DictGroupTest.cpp"],
+    deps = [
+        ":dict_group_test_base",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "dict_group_test_base",
+    testonly = True,
+    hdrs = ["DictGroupTestBase.hpp"],
+    deps = [
+        ":dict_group",
+        ":text_dict_test_base",
     ],
 )
 
@@ -124,10 +298,60 @@ cc_test(
 )
 
 cc_library(
-    name = "segments",
-    hdrs = [
-        "Segments.hpp",
+    name = "max_match_segmentation",
+    srcs = ["MaxMatchSegmentation.cpp"],
+    hdrs = ["MaxMatchSegmentation.hpp"],
+    deps = [
+        ":common",
+        ":dict_group",
+        ":segmentation",
     ],
+)
+
+cc_test(
+    name = "max_match_segmentation_test",
+    srcs = ["MaxMatchSegmentationTest.cpp"],
+    deps = [
+        ":dict_group_test_base",
+        ":max_match_segmentation",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "phrase_extract",
+    srcs = ["PhraseExtract.cpp"],
+    hdrs = ["PhraseExtract.hpp"],
+    visibility = ["//src/tools:__pkg__"],
+    deps = [
+        ":common",
+        ":marisa_dict",
+        ":utf8_string_slice",
+    ],
+)
+
+pybind_extension(
+    name = "opencc_clib",
+    srcs = ["py_opencc.cpp"],
+    deps = [":opencc"],
+)
+
+py_library(
+    name = "py_opencc",
+    data = [":opencc_clib"],
+    imports = ["."],
+)
+
+cc_library(
+    name = "segmentation",
+    srcs = ["Segmentation.cpp"],
+    hdrs = ["Segmentation.hpp"],
+    deps = [":common"],
+)
+
+cc_library(
+    name = "segments",
+    hdrs = ["Segments.hpp"],
     deps = [":common"],
 )
 
@@ -156,6 +380,34 @@ cc_test(
     deps = [
         ":serialized_values",
         ":text_dict_test_base",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "simple_converter",
+    srcs = ["SimpleConverter.cpp"],
+    hdrs = [
+        "SimpleConverter.hpp",
+        "opencc.h",
+    ],
+    defines = ["BAZEL"],
+    deps = [
+        ":common",
+        ":config",
+        ":converter",
+        ":utf8_util",
+        "@bazel_tools//tools/cpp/runfiles",
+    ],
+)
+
+cc_test(
+    name = "simple_converter_test",
+    srcs = ["SimpleConverterTest.cpp"],
+    deps = [
+        ":config_test_base",
+        ":simple_converter",
+        ":test_utils_utf8",
         "@googletest//:gtest_main",
     ],
 )
@@ -205,6 +457,16 @@ cc_library(
         ":test_utils",
         ":test_utils_utf8",
         ":text_dict",
+    ],
+)
+
+cc_library(
+    name = "utf8_string_slice",
+    srcs = ["UTF8StringSlice.cpp"],
+    hdrs = ["UTF8StringSlice.hpp"],
+    deps = [
+        ":common",
+        ":utf8_util",
     ],
 )
 
