@@ -67,6 +67,24 @@ jobs:
           ref: ${{ steps.refs.outputs.after_ref }}
           fetch-depth: 0
 
+      - name: Verify checked out refs
+        shell: bash
+        run: |
+          before_head="$(git -C before rev-parse HEAD)"
+          after_head="$(git -C after rev-parse HEAD)"
+          {
+            echo "## Checked Out Refs"
+            echo
+            echo "- Expected before: \`${{ steps.refs.outputs.before_ref }}\`"
+            echo "- Actual before: \`${before_head}\`"
+            echo "- Expected after: \`${{ steps.refs.outputs.after_ref }}\`"
+            echo "- Actual after: \`${after_head}\`"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          test "$before_head" = "${{ steps.refs.outputs.before_ref }}"
+          test "$after_head" = "${{ steps.refs.outputs.after_ref }}"
+
       - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
@@ -102,6 +120,7 @@ jobs:
           if [ -x ./scripts/bazel-workspace-status.sh ]; then
             args+=(--workspace_status_command=./scripts/bazel-workspace-status.sh)
           fi
+          args+=(--noremote_accept_cached --remote_upload_local_results=false)
           bazel build "${args[@]}" //data:opencc_resources_zip
 
       - name: Build after resource zip
@@ -114,7 +133,36 @@ jobs:
           if [ -x ./scripts/bazel-workspace-status.sh ]; then
             args+=(--workspace_status_command=./scripts/bazel-workspace-status.sh)
           fi
+          args+=(--noremote_accept_cached --remote_upload_local_results=false)
           bazel build "${args[@]}" //data:opencc_resources_zip
+
+      - name: Capture resource zip metadata
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import hashlib
+          import json
+          import zipfile
+
+          print("## Resource Zip Metadata")
+          print()
+          for label, path in [
+              ("Before", "before/bazel-bin/data/opencc-resources.zip"),
+              ("After", "after/bazel-bin/data/opencc-resources.zip"),
+          ]:
+              data = open(path, "rb").read()
+              with zipfile.ZipFile(path) as archive:
+                  manifest_data = archive.read("opencc-resource-manifest.json")
+              manifest = json.loads(manifest_data)
+              print(f"- {label} zip SHA256: `{hashlib.sha256(data).hexdigest()}`")
+              print(
+                  f"- {label} manifest SHA256: "
+                  f"`{hashlib.sha256(manifest_data).hexdigest()}`"
+              )
+              print(f"- {label} manifest commit: `{manifest.get('commit_id')}`")
+              print(f"- {label} manifest built: `{manifest.get('build_time_utc')}`")
+          print()
+          PY
 
       - name: Generate diff report
         shell: bash
